@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MFCOPCUAClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCOPCUAClientDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="framework.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\accesscontrol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\accesscontrol_default.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\log_stdout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\network.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\nodestore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\nodestore_default.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\pki.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\pki_default.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\pubsub.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\securitypolicy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\plugin\securitypolicy_default.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\win32\ua_architecture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\architecture_definitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\architecture_functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\client_config_default.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\client_highlevel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\client_highlevel_async.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\client_subscriptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\network_tcp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\nodeids.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\server_config_default.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\server_pubsub.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\statuscodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\types_generated.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\types_generated_handling.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="open62541\util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MFCOPCUAClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCOPCUAClientDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="MFCOPCUAClient.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\MFCOPCUAClient.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\MFCOPCUAClient.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
