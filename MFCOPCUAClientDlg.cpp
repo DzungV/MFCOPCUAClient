@@ -14,15 +14,32 @@
 
 
 
+
 UA_Client* client = UA_Client_new();
+
 UA_Variant* myVariant = UA_Variant_new();
 CString status;
 CString strName;
-double dPosition;
+CString strPos;
+CString strStt;
+CString strTemp;
+
+double dPos = 0;
 int nMode;
 bool bStatus;
-double dTemperature;
+double dTemp;
 double dValue;
+byte blen;
+std::string strCmd;
+std::string CMD;
+int Arg[5];
+char STX = '2';
+char ETX = '3';
+
+CString StrPackData;
+int CRC;
+
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -93,8 +110,10 @@ BEGIN_MESSAGE_MAP(CMFCOPCUAClientDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTStart, &CMFCOPCUAClientDlg::OnBnClickedBtstart)
+	ON_EN_CHANGE(IDC_EDPos, &CMFCOPCUAClientDlg::OnEnChangeEdpos)
 	ON_BN_CLICKED(IDC_BTStop, &CMFCOPCUAClientDlg::OnBnClickedBtstop)
 	ON_BN_CLICKED(IDC_BTCh1, &CMFCOPCUAClientDlg::OnBnClickedBtch1)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -183,6 +202,98 @@ HCURSOR CMFCOPCUAClientDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+// convert UAString to stdstring
+std::string get_str_to_variant(UA_Variant* var)
+{
+	auto str = (UA_String*)var->data;
+	return ((char*)str->data);
+}
+
+// get length of UAString
+byte getlength(UA_Variant* var)
+{
+	auto str = (UA_String*)var->data;
+	return (str->length);
+}
+
+
+
+//function to generate protocol from packetdata, calculate and insert CRC to protocol
+std::string MakeCrc(std::string &strPacketData)
+{
+	int usCheckSum = 0;
+	unsigned short usPacketSize;
+	int i;
+	char ch;
+	std::size_t pos = strPacketData.find(";");
+	std::string strGetCrc = strPacketData.substr(1,pos);
+	usPacketSize = strGetCrc.length()-1;
+	
+	for (i = 0; i < usPacketSize; i++)
+	{
+		ch = strGetCrc.at(i);
+		usCheckSum = usCheckSum ^ strGetCrc.at(i);
+	}
+	
+	
+	strPacketData.erase(strPacketData.length() - 1);
+	pos = strPacketData.find(";");
+	std::string strChSumSend = strPacketData.substr(pos + 1);
+	int nChSumSend = stoi(strChSumSend);
+	if (usCheckSum == nChSumSend)
+	{
+		strGetCrc += strPacketData.substr(pos + 1);
+		return strGetCrc;
+	}	
+	else
+		return "reception failed";
+}
+// Get Command
+std::string GetCmd(std::string &Cmd)
+{
+	
+	std::string command = Cmd.substr(0, 4);
+	return command;
+}
+int GetServoStt(std::string& Cmd)
+{
+	std::string stt = Cmd.substr(5, 1);
+	int status = stoi(stt);
+	return status;
+}
+int GetCoord(std::string& Cmd)
+{
+	std::string coo = Cmd.substr(5, 1);
+	int coord = stoi(coo);
+	return coord;
+}
+int GetJoint(std::string& Cmd)
+{
+	std::string joi = Cmd.substr(7, 1);
+	int joint = stoi(joi);
+	return joint;
+}
+int GetJoint1(std::string& Cmd)
+{
+	std::string joi = Cmd.substr(5, 1);
+	int joint = stoi(joi);
+	return joint;
+}
+int GetDirection(std::string& Cmd)
+{
+	std::string dir = Cmd.substr(9, 2);
+	int direct = stoi(dir);
+	return direct;
+}
+int GetCrc(std::string& Cmd)
+{
+	std::size_t p = Cmd.find(";");
+	std::string Crc = Cmd.substr(p + 1);
+	int Checksum = stoi(Crc);
+	return Checksum;
+	
+}
+	
 
 
 void CMFCOPCUAClientDlg::OnBnClickedBtstart()
@@ -205,44 +316,86 @@ void CMFCOPCUAClientDlg::OnBnClickedBtstop()
 
 void CMFCOPCUAClientDlg::OnBnClickedBtch1()
 {
+	
 	// TODO: Add your control notification handler code here
-	CString strName = _T("");
-	edName.GetWindowText(strName);
-	std::string sName((LPCTSTR)strName); 
-	UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(strName), &UA_TYPES[UA_TYPES_STRING]);
-	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Name"), myVariant);
+	SetTimer(TIMERCOUNT, 10, NULL);
 	
-	  // Set Mode
-	CString strMode = _T("");
-	edMode.GetWindowText(strMode);
-	UA_Int32 valMode = 0;
-	valMode= _ttoi(strMode);
-	UA_Variant_setScalarCopy(myVariant, &valMode, &UA_TYPES[UA_TYPES_INT32]);
-	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Mode"), myVariant);
 	
-	//
-	////Set Position
-	CString strPos = _T("");
-	edPos.GetWindowText(strPos);
-	UA_Double valPos = 0;
-	valPos = _tstof(strPos);
-	UA_Variant_setScalarCopy(myVariant, &valPos, &UA_TYPES[UA_TYPES_DOUBLE]);
-	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Position"), myVariant);
-	
-	////Set Status
-	CString strStt = _T("");
-	edStt.GetWindowText(strStt);
-	UA_Boolean valStt = 0;
-	std::string s((LPCTSTR)strStt);
-	std::istringstream(s) >> valStt;
-	UA_Variant_setScalarCopy(myVariant, &valStt, &UA_TYPES[UA_TYPES_BOOLEAN]);
-	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Status"), myVariant);
-	//Set Temperature
-	CString strTemp = _T("");
-	edTemp.GetWindowText(strTemp);
-	UA_Double valTemp = 0;
-	valTemp = _tstof(strTemp);
-	UA_Variant_setScalarCopy(myVariant, &valTemp, &UA_TYPES[UA_TYPES_DOUBLE]);
-	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Temperature"), myVariant);
 
+}
+
+
+void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: Add your message handler code here and/or call default
+	if (nIDEvent == TIMERCOUNT)
+	{
+		//Get Control Command
+
+		
+			/*dPos = dPos + 2.5;
+			strPos.Format(_T("%f"), dPos);
+			edPos.SetWindowText(strPos);
+			UA_Double valPos = 0;
+			valPos = _tstof(strPos);
+			UA_Variant_setScalarCopy(myVariant, &valPos, &UA_TYPES[UA_TYPES_DOUBLE]);
+			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Position"), myVariant);*/
+		UA_Variant value;
+		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Name"), &value);
+		blen = getlength(&value);
+		strCmd = get_str_to_variant(&value);
+		strCmd.resize(blen);
+		CString CstrCmd(strCmd.c_str());
+		edName.SetWindowText(CstrCmd);
+		strCmd = MakeCrc(strCmd);
+		CMD = GetCmd(strCmd);
+		CString cstrCMD(CMD.c_str());
+		edPos.SetWindowText(cstrCMD);
+		CString cstr(strCmd.c_str());
+		CRC = GetCrc(strCmd);
+		cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+		UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+		UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
+
+
+
+
+		if (CMD == "SVON")
+		{
+			Arg[1] = GetServoStt(strCmd);
+			strPos.Format(_T("%d"), Arg[1]);
+			edMode.SetWindowText(strPos);
+		}
+		else if (CMD == "JOGJ")
+		{
+			Arg[1] = GetCoord(strCmd);
+			strPos.Format(_T("%d"), Arg[1]);
+			edMode.SetWindowText(strPos);
+			Arg[2] = GetJoint(strCmd);
+			strStt.Format(_T("%d"), Arg[2]);
+			edStt.SetWindowText(strStt);
+			Arg[3] = GetDirection(strCmd);
+			strTemp.Format(_T("%d"), Arg[3]);
+			edTemp.SetWindowText(strTemp);
+		}
+		else if (CMD == "STOP")
+			Arg[1] = GetJoint1(strCmd);
+			strPos.Format(_T("%d"), Arg[1]);
+			edMode.SetWindowText(strPos);
+		
+		
+		
+	}
+	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void CMFCOPCUAClientDlg::OnEnChangeEdpos()
+{
+	// TODO:  If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialogEx::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+
+	// TODO:  Add your control notification handler code here
 }

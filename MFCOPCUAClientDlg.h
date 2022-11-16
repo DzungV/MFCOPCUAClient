@@ -9,6 +9,7 @@
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/types_generated.h>
 #include <open62541/types.h>
+#define TIMERCOUNT 100 
 
 
 // CMFCOPCUAClientDlg dialog
@@ -56,4 +57,6 @@ public:
 	afx_msg void OnBnClickedBtstop();
 	CButton btnChData;
 	afx_msg void OnBnClickedBtch1();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnEnChangeEdpos();
 };
