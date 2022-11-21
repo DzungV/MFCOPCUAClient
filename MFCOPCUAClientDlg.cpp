@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string>
 #include <sstream>
+#include "ProgramCommand.h"
 
 
 
@@ -38,7 +39,10 @@ char ETX = '3';
 
 CString StrPackData;
 int CRC;
-
+int CRCpre = 0;
+int cnt = 1;
+int fin = 0;
+int finp = 0;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -105,12 +109,13 @@ void CMFCOPCUAClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_BTCh1, btnChData);
 }
 
+
+
 BEGIN_MESSAGE_MAP(CMFCOPCUAClientDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTStart, &CMFCOPCUAClientDlg::OnBnClickedBtstart)
-	ON_EN_CHANGE(IDC_EDPos, &CMFCOPCUAClientDlg::OnEnChangeEdpos)
 	ON_BN_CLICKED(IDC_BTStop, &CMFCOPCUAClientDlg::OnBnClickedBtstop)
 	ON_BN_CLICKED(IDC_BTCh1, &CMFCOPCUAClientDlg::OnBnClickedBtch1)
 	ON_WM_TIMER()
@@ -293,6 +298,34 @@ int GetCrc(std::string& Cmd)
 	return Checksum;
 	
 }
+
+int GetCurline(std::string& Cmd)
+{
+	std::size_t no = Cmd.find(",");
+	no = Cmd.find(",", no + 1);
+	std::string noln = Cmd.substr(no+1);
+	int noline = stoi(noln);
+	return noline;
+}
+std::string GetCMD(std::string& Cmd)
+{
+	std::size_t n = Cmd.find(";");
+	std::string cmd = Cmd.substr(0, n );
+	return cmd;
+}
+std::string Gettxt(std::string& Cmd)
+{
+	std::size_t no = Cmd.find(",");
+	no = Cmd.find(",", no + 1);
+	std::string noln = Cmd.substr(5, no);
+	return noln;
+}
+std::string Gettxt1(std::string& Cmd)
+{
+	std::size_t no = Cmd.find(",");
+	std::string noln = Cmd.substr(0, no);
+	return noln;
+}
 	
 
 
@@ -332,7 +365,7 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 	{
 		//Get Control Command
 
-		
+
 			/*dPos = dPos + 2.5;
 			strPos.Format(_T("%f"), dPos);
 			edPos.SetWindowText(strPos);
@@ -357,7 +390,7 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 		UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
 		UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
 
-
+		
 
 
 		if (CMD == "SVON")
@@ -365,6 +398,11 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 			Arg[1] = GetServoStt(strCmd);
 			strPos.Format(_T("%d"), Arg[1]);
 			edMode.SetWindowText(strPos);
+
+			CRC = GetCrc(strCmd);
+			cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
 		}
 		else if (CMD == "JOGJ")
 		{
@@ -377,25 +415,58 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 			Arg[3] = GetDirection(strCmd);
 			strTemp.Format(_T("%d"), Arg[3]);
 			edTemp.SetWindowText(strTemp);
+
+			CRC = GetCrc(strCmd);
+			cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
 		}
 		else if (CMD == "STOP")
+		{
 			Arg[1] = GetJoint1(strCmd);
 			strPos.Format(_T("%d"), Arg[1]);
 			edMode.SetWindowText(strPos);
+
+			CRC = GetCrc(strCmd);
+			cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
+		}
+		else if (CMD == "ASMW")
+		{
+			std::string strCMD = GetCMD(strCmd);
+			std::string Cmdtxt = Gettxt(strCMD);
+			Cmdtxt = Gettxt1(Cmdtxt);
+			Arg[1] = GetCurline(strCMD);
+
+			
+			if (cnt == Arg[1])
+			{
+				ProgramCommand ProgCmd;
+				ProgCmd.recordProgramCommand(Cmdtxt);
+				cnt++;
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
+			}	
+			
+			if (cnt != (Arg[1]+1))
+			{
+				cnt = 1;
+			}
+
+	
+		}
 		
-		
-		
+
+
+
 	}
 	CDialogEx::OnTimer(nIDEvent);
 }
 
 
-void CMFCOPCUAClientDlg::OnEnChangeEdpos()
-{
-	// TODO:  If this is a RICHEDIT control, the control will not
-	// send this notification unless you override the CDialogEx::OnInitDialog()
-	// function and call CRichEditCtrl().SetEventMask()
-	// with the ENM_CHANGE flag ORed into the mask.
 
-	// TODO:  Add your control notification handler code here
-}
+
