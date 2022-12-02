@@ -7,6 +7,7 @@ class ProgramCommand
 public:
 	
 	void recordProgramCommand(string Command);
+	void clearProgramCommand();
 
 };
 

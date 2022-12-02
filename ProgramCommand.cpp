@@ -12,3 +12,9 @@ void ProgramCommand::recordProgramCommand(string Command)
 	outFile << Command << "\n";
 	outFile.close();
 }
+void ProgramCommand::clearProgramCommand()
+{
+	std::ofstream ofs;
+	ofs.open("getcmd.txt", std::ofstream::out | std::ofstream::trunc);
+	ofs.close();
+}

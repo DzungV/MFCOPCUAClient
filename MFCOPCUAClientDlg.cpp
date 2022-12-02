@@ -19,6 +19,7 @@
 UA_Client* client = UA_Client_new();
 
 UA_Variant* myVariant = UA_Variant_new();
+UA_Variant value;
 CString status;
 CString strName;
 CString strPos;
@@ -253,7 +254,7 @@ std::string MakeCrc(std::string &strPacketData)
 	else
 		return "reception failed";
 }
-// Get Command
+// Get Command Argument
 std::string GetCmd(std::string &Cmd)
 {
 	
@@ -326,18 +327,45 @@ std::string Gettxt1(std::string& Cmd)
 	std::string noln = Cmd.substr(0, no);
 	return noln;
 }
+int GetSpeed(std::string& Cmd)
+{
+	std::size_t n = Cmd.find(",");
+	std::string sp = Cmd.substr(n + 1, 1);
+	int spd = stoi(sp);
+	return spd;
+}
 	
 
 
 void CMFCOPCUAClientDlg::OnBnClickedBtstart()
 {
 	// TODO: Add your control notification handler code here
-		
+	AfxMessageBox(_T("Please open server first"), MB_OK | MB_ICONINFORMATION);
 	UA_ClientConfig_setDefault(UA_Client_getConfig(client));
 	UA_Client_connect(client, "opc.tcp://localhost:4880");  //connect to server
 	status = _T("Logging Started and Connected to OPC Server");
 	stSttMsg.SetWindowText(status);
+	ProgramCommand ProgCMD;
+	ProgCMD.clearProgramCommand();
+	
+	/*std::string msg;
+	while (msg != "Starting transmitting data")
+	{
+		
+		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/StartMsg"), &value);
+		int len = getlength(&value);
+		msg = get_str_to_variant(&value);
+		msg.resize(len);
+	}
+	
+	CString reply;
+	reply = _T("ACK,OK,READY");
+	UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(reply), &UA_TYPES[UA_TYPES_STRING]);
+	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/StartMsg"), myVariant);
 
+	UA_Int32 valRep = 5;
+	UA_Variant_setScalarCopy(myVariant, &valRep, &UA_TYPES[UA_TYPES_INT32]);
+	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Startchar"), myVariant);*/
 }
 
 
@@ -349,6 +377,9 @@ void CMFCOPCUAClientDlg::OnBnClickedBtstop()
 
 void CMFCOPCUAClientDlg::OnBnClickedBtch1()
 {
+	
+	//AfxMessageBox(_T("Please open user client to send start request first"), MB_OK | MB_ICONINFORMATION);
+	
 	
 	// TODO: Add your control notification handler code here
 	SetTimer(TIMERCOUNT, 10, NULL);
@@ -373,91 +404,106 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 			valPos = _tstof(strPos);
 			UA_Variant_setScalarCopy(myVariant, &valPos, &UA_TYPES[UA_TYPES_DOUBLE]);
 			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Position"), myVariant);*/
-		UA_Variant value;
-		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Name"), &value);
+
+		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDSend"), &value);
 		blen = getlength(&value);
 		strCmd = get_str_to_variant(&value);
 		strCmd.resize(blen);
 		CString CstrCmd(strCmd.c_str());
 		edName.SetWindowText(CstrCmd);
-		strCmd = MakeCrc(strCmd);
-		CMD = GetCmd(strCmd);
-		CString cstrCMD(CMD.c_str());
-		edPos.SetWindowText(cstrCMD);
-		CString cstr(strCmd.c_str());
-		CRC = GetCrc(strCmd);
-		cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-		UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-		UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
-
-		
-
-
-		if (CMD == "SVON")
+		if (strCmd != "No Command Sent yet")
 		{
-			Arg[1] = GetServoStt(strCmd);
-			strPos.Format(_T("%d"), Arg[1]);
-			edMode.SetWindowText(strPos);
-
-			CRC = GetCrc(strCmd);
+			strCmd = MakeCrc(strCmd);
+			CMD = GetCmd(strCmd);
+			CString cstrCMD(CMD.c_str());
+			edPos.SetWindowText(cstrCMD);
+			CString cstr(strCmd.c_str());
+			/*CRC = GetCrc(strCmd);
 			cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
 			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
-		}
-		else if (CMD == "JOGJ")
-		{
-			Arg[1] = GetCoord(strCmd);
-			strPos.Format(_T("%d"), Arg[1]);
-			edMode.SetWindowText(strPos);
-			Arg[2] = GetJoint(strCmd);
-			strStt.Format(_T("%d"), Arg[2]);
-			edStt.SetWindowText(strStt);
-			Arg[3] = GetDirection(strCmd);
-			strTemp.Format(_T("%d"), Arg[3]);
-			edTemp.SetWindowText(strTemp);
+			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);*/
 
-			CRC = GetCrc(strCmd);
-			cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
-		}
-		else if (CMD == "STOP")
-		{
-			Arg[1] = GetJoint1(strCmd);
-			strPos.Format(_T("%d"), Arg[1]);
-			edMode.SetWindowText(strPos);
 
-			CRC = GetCrc(strCmd);
-			cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
-		}
-		else if (CMD == "ASMW")
-		{
-			std::string strCMD = GetCMD(strCmd);
-			std::string Cmdtxt = Gettxt(strCMD);
-			Cmdtxt = Gettxt1(Cmdtxt);
-			Arg[1] = GetCurline(strCMD);
 
-			
-			if (cnt == Arg[1])
+
+			if (CMD == "SVON")
 			{
-				ProgramCommand ProgCmd;
-				ProgCmd.recordProgramCommand(Cmdtxt);
-				cnt++;
+				Arg[1] = GetServoStt(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				edMode.SetWindowText(strPos);
 
 				CRC = GetCrc(strCmd);
 				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
 				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);
-			}	
-			
-			if (cnt != (Arg[1]+1))
-			{
-				cnt = 1;
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 			}
+			else if (CMD == "JOGJ")
+			{
+				Arg[1] = GetCoord(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				edMode.SetWindowText(strPos);
+				Arg[2] = GetJoint(strCmd);
+				strStt.Format(_T("%d"), Arg[2]);
+				edStt.SetWindowText(strStt);
+				Arg[3] = GetDirection(strCmd);
+				strTemp.Format(_T("%d"), Arg[3]);
+				edTemp.SetWindowText(strTemp);
 
-	
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+			}
+			else if (CMD == "STOP")
+			{
+				Arg[1] = GetJoint1(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				edMode.SetWindowText(strPos);
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+			}
+			else if (CMD == "SPED")
+			{
+				Arg[1] = GetSpeed(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				edMode.SetWindowText(strPos);
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+			}
+			else if (CMD == "ASMW")
+			{
+				std::string strCMD = GetCMD(strCmd);
+				std::string Cmdtxt = Gettxt(strCMD);
+				Cmdtxt = Gettxt1(Cmdtxt);
+				Arg[1] = GetCurline(strCMD);
+
+
+				if (cnt == Arg[1])
+				{
+					ProgramCommand ProgCmd;
+					ProgCmd.recordProgramCommand(Cmdtxt);
+					cnt++;
+
+					CRC = GetCrc(strCmd);
+					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+				}
+
+				if (cnt != (Arg[1] + 1))
+				{
+					cnt = 1;
+					ProgramCommand ProgCmd;
+					ProgCmd.clearProgramCommand();
+				}
+
+
+			}
 		}
 		
 
