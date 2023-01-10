@@ -11,6 +11,9 @@
 #include <string>
 #include <sstream>
 #include "ProgramCommand.h"
+#include <iostream>       
+#include <string>        
+#include <cstddef>  
 
 
 
@@ -20,12 +23,14 @@ UA_Client* client = UA_Client_new();
 
 UA_Variant* myVariant = UA_Variant_new();
 UA_Variant value;
+UA_Int32 nclient;
 CString status;
 CString strName;
 CString strPos;
 CString strStt;
 CString strTemp;
 
+bool bchTimer;
 double dPos = 0;
 int nMode;
 bool bStatus;
@@ -120,6 +125,7 @@ BEGIN_MESSAGE_MAP(CMFCOPCUAClientDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTStop, &CMFCOPCUAClientDlg::OnBnClickedBtstop)
 	ON_BN_CLICKED(IDC_BTCh1, &CMFCOPCUAClientDlg::OnBnClickedBtch1)
 	ON_WM_TIMER()
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -300,10 +306,10 @@ int GetCrc(std::string& Cmd)
 	
 }
 
+
 int GetCurline(std::string& Cmd)
 {
-	std::size_t no = Cmd.find(",");
-	no = Cmd.find(",", no + 1);
+	std::size_t no = Cmd.find_last_of(",");
 	std::string noln = Cmd.substr(no+1);
 	int noline = stoi(noln);
 	return noline;
@@ -316,9 +322,13 @@ std::string GetCMD(std::string& Cmd)
 }
 std::string Gettxt(std::string& Cmd)
 {
-	std::size_t no = Cmd.find(",");
+	/*std::size_t no = Cmd.find(",");
 	no = Cmd.find(",", no + 1);
 	std::string noln = Cmd.substr(5, no);
+	return noln;*/
+	std::size_t no = Cmd.find(",");
+	std::size_t no1 = Cmd.find_last_of(",");
+	std::string noln = Cmd.substr(no+1, no1-no-1);
 	return noln;
 }
 std::string Gettxt1(std::string& Cmd)
@@ -333,9 +343,7 @@ int GetSpeed(std::string& Cmd)
 	std::string sp = Cmd.substr(n + 1, 1);
 	int spd = stoi(sp);
 	return spd;
-}
-	
-
+}	
 
 void CMFCOPCUAClientDlg::OnBnClickedBtstart()
 {
@@ -345,6 +353,15 @@ void CMFCOPCUAClientDlg::OnBnClickedBtstart()
 	UA_Client_connect(client, "opc.tcp://localhost:4880");  //connect to server
 	status = _T("Logging Started and Connected to OPC Server");
 	stSttMsg.SetWindowText(status);
+	
+	bchTimer = true;
+
+	UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), &value);
+	nclient = *(UA_Int32*)value.data;
+	nclient += 1;
+	UA_Variant_setScalarCopy(myVariant, &nclient, &UA_TYPES[UA_TYPES_INT32]);
+	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), myVariant);
+
 	ProgramCommand ProgCMD;
 	ProgCMD.clearProgramCommand();
 	
@@ -372,6 +389,21 @@ void CMFCOPCUAClientDlg::OnBnClickedBtstart()
 void CMFCOPCUAClientDlg::OnBnClickedBtstop()
 {
 	// TODO: Add your control notification handler code here
+	
+
+	UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), &value);
+	nclient = *(UA_Int32*)value.data;
+	nclient += -1;
+	UA_Variant_setScalarCopy(myVariant, &nclient, &UA_TYPES[UA_TYPES_INT32]);
+	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), myVariant);
+	
+	bchTimer = false;
+	KillTimer(TIMERCOUNT);
+
+	UA_Client_disconnect(client);
+
+	status = _T("Disconnected from OPC Server");
+	stSttMsg.SetWindowText(status);
 }
 
 
@@ -381,8 +413,11 @@ void CMFCOPCUAClientDlg::OnBnClickedBtch1()
 	//AfxMessageBox(_T("Please open user client to send start request first"), MB_OK | MB_ICONINFORMATION);
 	
 	
-	// TODO: Add your control notification handler code here
-	SetTimer(TIMERCOUNT, 10, NULL);
+	// TODO: Add your control notification handler code herec
+	if (bchTimer == true)
+		SetTimer(TIMERCOUNT, 10, NULL);
+	else
+		KillTimer(TIMERCOUNT);
 	
 	
 
@@ -479,7 +514,6 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 			{
 				std::string strCMD = GetCMD(strCmd);
 				std::string Cmdtxt = Gettxt(strCMD);
-				Cmdtxt = Gettxt1(Cmdtxt);
 				Arg[1] = GetCurline(strCMD);
 
 
@@ -501,8 +535,33 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 					ProgramCommand ProgCmd;
 					ProgCmd.clearProgramCommand();
 				}
+			}
+			else if (CMD == "TPTS")
+			{
+				std::string strCMD = GetCMD(strCmd);
+				std::string Cmdtxt = Gettxt(strCMD);
+				//Cmdtxt = Gettxt1(Cmdtxt);
+				Arg[1] = GetCurline(strCMD);
 
 
+				if (cnt == Arg[1])
+				{
+					ProgramCommand ProgCmd;
+					ProgCmd.recordTaughtPoints(Cmdtxt);
+					cnt++;
+
+					CRC = GetCrc(strCmd);
+					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+				}
+
+				if (cnt != (Arg[1] + 1))
+				{
+					cnt = 1;
+					ProgramCommand ProgCmd;
+					ProgCmd.clearTaughtPoints();
+				}
 			}
 		}
 		
@@ -516,3 +575,28 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 
 
 
+
+
+
+
+
+void CMFCOPCUAClientDlg::OnClose()
+{
+	// TODO: Add your message handler code here and/or call default
+	if (status == "Logging Started and Connected to OPC Server")
+	{
+		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), &value);
+		nclient = *(UA_Int32*)value.data;
+		nclient += -1;
+		UA_Variant_setScalarCopy(myVariant, &nclient, &UA_TYPES[UA_TYPES_INT32]);
+		UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), myVariant);
+
+		bchTimer = false;
+		KillTimer(TIMERCOUNT);
+		UA_Client_disconnect(client);
+
+		CDialogEx::OnClose();
+	}
+	else
+		CDialogEx::OnClose();
+}

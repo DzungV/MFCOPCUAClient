@@ -59,4 +59,5 @@ public:
 	afx_msg void OnBnClickedBtch1();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 
+	afx_msg void OnClose();
 };
