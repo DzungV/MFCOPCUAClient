@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <windows.h>
 #include <open62541/client_config_default.h>
 #include <open62541/client_highlevel.h>
 #include <open62541/client_subscriptions.h>
@@ -60,4 +61,8 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 
 	afx_msg void OnClose();
+	CEdit edSvIPAddr;
+	CButton btnSaveIP;
+	afx_msg void OnBnClickedBtsaveipaddr();
+	CEdit edCurTime;
 };
