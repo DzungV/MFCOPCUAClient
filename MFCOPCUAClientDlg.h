@@ -12,6 +12,7 @@
 #include <open62541/types.h>
 #define TIMERCOUNT 100 
 
+UINT CMDThread(LPVOID pParam);
 
 // CMFCOPCUAClientDlg dialog
 class CMFCOPCUAClientDlg : public CDialogEx
@@ -65,4 +66,7 @@ public:
 	CButton btnSaveIP;
 	afx_msg void OnBnClickedBtsaveipaddr();
 	CEdit edCurTime;
+	CWinThread* thread;
+	~CMFCOPCUAClientDlg();
+	afx_msg void OnBnClickedBtsw();
 };

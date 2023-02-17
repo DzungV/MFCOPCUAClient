@@ -30,6 +30,7 @@ CString strName;
 CString strPos;
 CString strStt;
 CString strTemp;
+CString cstrAck;
 
 bool bchTimer;
 double dPos = 0;
@@ -43,6 +44,9 @@ std::string CMD;
 int Arg[5];
 char STX = '2';
 char ETX = '3';
+bool bCMDcheck;
+bool bCMDflag;
+bool bCMDcheckpre;
 
 CString StrPackData;
 int CRC;
@@ -66,6 +70,10 @@ int nsystemstt = 1;
 bool brbmode = 0;
 int nseclevel = 2;
 bool blockrbc = 1;
+int countt;
+int cntt;
+
+std::string CMDfb;
  
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -103,6 +111,7 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 
 	
+
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
@@ -116,6 +125,7 @@ END_MESSAGE_MAP()
 CMFCOPCUAClientDlg::CMFCOPCUAClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_MFCOPCUACLIENT_DIALOG, pParent)
 {
+	thread = NULL;
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
@@ -137,6 +147,8 @@ void CMFCOPCUAClientDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Control(pDX, IDC_EDSaveIPAddr, edSvIPAddr);
 	DDX_Control(pDX, IDC_BTSaveIPAddr, btnSaveIP);
+	
+	
 }
 
 
@@ -149,6 +161,7 @@ BEGIN_MESSAGE_MAP(CMFCOPCUAClientDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTStart, &CMFCOPCUAClientDlg::OnBnClickedBtstart)
 	ON_BN_CLICKED(IDC_BTStop, &CMFCOPCUAClientDlg::OnBnClickedBtstop)
 	ON_BN_CLICKED(IDC_BTCh1, &CMFCOPCUAClientDlg::OnBnClickedBtch1)
+	ON_BN_CLICKED(IDC_BTSW, &CMFCOPCUAClientDlg::OnBnClickedBtsw)
 	ON_WM_TIMER()
 	ON_WM_CLOSE()
 END_MESSAGE_MAP()
@@ -394,6 +407,12 @@ void CMFCOPCUAClientDlg::OnBnClickedBtstart()
 		UA_Variant_setScalarCopy(myVariant, &nclient, &UA_TYPES[UA_TYPES_INT32]);
 		UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), myVariant);
 		nclientpre = nclient;
+
+
+		bCMDflag = 1; 
+		UA_Variant_setScalarCopy(myVariant, &bCMDflag, &UA_TYPES[UA_TYPES_BOOLEAN]);
+		UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDCheck"), myVariant);
+
 	}
 	else
 		AfxMessageBox(_T("Please Enter Server IP Address"), MB_OK | MB_ICONINFORMATION);
@@ -455,9 +474,215 @@ void CMFCOPCUAClientDlg::OnBnClickedBtch1()
 		SetTimer(TIMERCOUNT, 10, NULL);
 	else
 		KillTimer(TIMERCOUNT);
-	
-	
+	thread = AfxBeginThread(CMDThread, this);
 
+}
+
+UINT CMDThread(LPVOID pParam)
+{
+	
+	CMFCOPCUAClientDlg* ptr = (CMFCOPCUAClientDlg*)pParam;
+	while (1)
+	{
+
+
+		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDSend"), &value);
+		blen = getlength(&value);
+		strCmd = get_str_to_variant(&value);
+		strCmd.resize(blen);
+		
+		if (strCmd != "No Command Sent yet")
+		{
+			CMDfb = "No Command Sent yet";
+			CString strfb(CMDfb.c_str());
+			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(strfb), &UA_TYPES[UA_TYPES_STRING]);
+			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDSend"), myVariant);
+
+			strCmd = MakeCrc(strCmd);
+			CMD = GetCmd(strCmd);
+			//CString cstrCMD(CMD.c_str());
+			//edPos.SetWindowText(cstrCMD);
+			CString cstr(strCmd.c_str());
+
+			if (CMD == "SVON")
+			{
+				Arg[1] = GetServoStt(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				//edMode.SetWindowText(strPos);
+
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+
+				//done
+
+
+
+
+
+
+
+			}
+			else if (CMD == "JOGJ")
+			{
+				Arg[1] = GetCoord(strCmd);
+				strPos.Format(_T("%d"), Arg[1]); // coord
+				//edMode.SetWindowText(strPos);
+				//Arg[2] = GetJoint(strCmd); // joint
+				cntt++;
+				strStt.Format(_T("%d"), cntt);
+				//edStt.SetWindowText(strStt);
+				Arg[3] = GetDirection(strCmd); // direct +1:pos -1:neg
+				strTemp.Format(_T("%d"), Arg[3]);
+				//edTemp.SetWindowText(strTemp);
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+
+				//done
+
+
+
+			}
+			else if (CMD == "STOP")
+			{
+				Arg[1] = GetJoint1(strCmd); // joint
+				strPos.Format(_T("%d"), Arg[1]);
+				//edMode.SetWindowText(strPos);					
+				/*strTemp.Format(_T("%d"), countt);*/
+				//edTemp.SetWindowText(strTemp);
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+
+				//done
+
+
+			}
+			else if (CMD == "SPED")
+			{
+				Arg[1] = GetSpeed(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				//edMode.SetWindowText(strPos);
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+
+				//done
+
+
+			}
+			else if (CMD == "RBDO") // this cmd as same as program cmd
+			{
+
+
+				std::string strCMD = GetCMD(strCmd);
+				int i = 0;
+				char* s;
+				char* p;
+				char* str = new char[strCMD.length() + 1];
+				strcpy(str, strCMD.c_str());
+				p = strtok(str, ",");
+				while (p != NULL)
+				{
+					p = strtok(NULL, ",");
+					if (p != NULL)
+					{
+						Arg[i] = stoi(p);
+						i++;
+					}
+
+				}
+				strPos.Format(_T("%d"), Arg[0]);  // group
+				//edMode.SetWindowText(strPos);
+				strStt.Format(_T("%d"), Arg[1]); // bit
+				//edStt.SetWindowText(strStt);
+				strTemp.Format(_T("%d"), Arg[2]); // status
+				//edTemp.SetWindowText(strTemp);
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+
+				//done
+
+
+			}
+			else if (CMD == "ASMW")
+			{
+				std::string strCMD = GetCMD(strCmd);
+				std::string Cmdtxt = Gettxt(strCMD);
+				Arg[1] = GetCurline(strCMD);
+
+
+				if (cnt == Arg[1])
+				{
+					ProgramCommand ProgCmd;
+					ProgCmd.recordProgramCommand(Cmdtxt);
+					cnt++;
+
+					CRC = GetCrc(strCmd);
+					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+				}
+
+				if (cnt != (Arg[1] + 1))
+				{
+					cnt = 1;
+					ProgramCommand ProgCmd;
+					ProgCmd.clearProgramCommand();
+
+					//done
+
+
+				}
+			}
+			else if (CMD == "TPTS")
+			{
+				std::string strCMD = GetCMD(strCmd);
+				std::string Cmdtxt = Gettxt(strCMD);
+				//Cmdtxt = Gettxt1(Cmdtxt);
+				Arg[1] = GetCurline(strCMD);
+
+
+				if (cnt == Arg[1])
+				{
+					ProgramCommand ProgCmd;
+					ProgCmd.recordTaughtPoints(Cmdtxt);
+					cnt++;
+
+					CRC = GetCrc(strCmd);
+					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+				}
+
+				if (cnt != (Arg[1] + 1))
+				{
+					cnt = 1;
+					ProgramCommand ProgCmd;
+					ProgCmd.clearTaughtPoints();
+
+
+				}
+			}
+		}
+	}
+
+	
+			//edName.SetWindowText(CstrCmd);
+			
+	
+	return 0;
+		
 }
 
 
@@ -470,168 +695,19 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 		curtime = COleDateTime::GetCurrentTime().Format("%H:%M:%S");
 		edCurTime.SetWindowText(curtime);
 
-		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/StatusMsg"), &value);
+		/*UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/StatusMsg"), &value);
 		svstatus = *(UA_Boolean*)value.data;
 		if (svstatus == true)
-		{
-			
-			UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDSend"), &value);
-			blen = getlength(&value);
-			strCmd = get_str_to_variant(&value);
-			strCmd.resize(blen);
+		{*/
 			CString CstrCmd(strCmd.c_str());
 			edName.SetWindowText(CstrCmd);
-			if (strCmd != "No Command Sent yet")
-			{
-				strCmd = MakeCrc(strCmd);
-				CMD = GetCmd(strCmd);
-				CString cstrCMD(CMD.c_str());
-				edPos.SetWindowText(cstrCMD);
-				CString cstr(strCmd.c_str());
-				/*CRC = GetCrc(strCmd);
-				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot2/Name"), myVariant);*/
+			CString cstrCMD(CMD.c_str());
+			edPos.SetWindowText(cstrCMD);
 
-
-
-
-				if (CMD == "SVON")
-				{
-					Arg[1] = GetServoStt(strCmd);
-					strPos.Format(_T("%d"), Arg[1]);
-					edMode.SetWindowText(strPos);
-
-					CRC = GetCrc(strCmd);
-					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-				}
-				else if (CMD == "JOGJ")
-				{
-					Arg[1] = GetCoord(strCmd);
-					strPos.Format(_T("%d"), Arg[1]); // coord
-					edMode.SetWindowText(strPos);
-					Arg[2] = GetJoint(strCmd); // joint
-					strStt.Format(_T("%d"), Arg[2]);
-					edStt.SetWindowText(strStt);
-					Arg[3] = GetDirection(strCmd); // direct +1:pos -1:neg
-					strTemp.Format(_T("%d"), Arg[3]);
-					edTemp.SetWindowText(strTemp);
-
-					CRC = GetCrc(strCmd);
-					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-				}
-				else if (CMD == "STOP")
-				{
-					Arg[1] = GetJoint1(strCmd); // joint
-					strPos.Format(_T("%d"), Arg[1]);
-					edMode.SetWindowText(strPos);
-
-					CRC = GetCrc(strCmd);
-					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-				}
-				else if (CMD == "SPED")
-				{
-					Arg[1] = GetSpeed(strCmd);
-					strPos.Format(_T("%d"), Arg[1]);
-					edMode.SetWindowText(strPos);
-					CRC = GetCrc(strCmd);
-					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-				}
-				else if (CMD == "RBDO") // this cmd as same as program cmd
-				{
-					
-
-					std::string strCMD = GetCMD(strCmd);
-					int i = 0;
-					char* s;
-					char* p;
-					char* str = new char[strCMD.length() + 1];
-					strcpy(str, strCMD.c_str());
-					p = strtok(str, ",");
-					while (p != NULL)
-					{
-						p = strtok(NULL, ",");
-						if (p != NULL)
-						{						
-							Arg[i] = stoi(p);
-							i++;
-						}
-						
-					}
-					strPos.Format(_T("%d"), Arg[0]);  // group
-					edMode.SetWindowText(strPos);
-					strStt.Format(_T("%d"), Arg[1]); // bit
-					edStt.SetWindowText(strStt);
-					strTemp.Format(_T("%d"), Arg[2]); // status
-					edTemp.SetWindowText(strTemp);
-					
-					CRC = GetCrc(strCmd);
-					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-				}
-				else if (CMD == "ASMW")
-				{
-					std::string strCMD = GetCMD(strCmd);
-					std::string Cmdtxt = Gettxt(strCMD);
-					Arg[1] = GetCurline(strCMD);
-
-
-					if (cnt == Arg[1])
-					{
-						ProgramCommand ProgCmd;
-						ProgCmd.recordProgramCommand(Cmdtxt);
-						cnt++;
-
-						CRC = GetCrc(strCmd);
-						cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-						UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-						UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-					}
-
-					if (cnt != (Arg[1] + 1))
-					{
-						cnt = 1;
-						ProgramCommand ProgCmd;
-						ProgCmd.clearProgramCommand();
-					}
-				}
-				else if (CMD == "TPTS")
-				{
-					std::string strCMD = GetCMD(strCmd);
-					std::string Cmdtxt = Gettxt(strCMD);
-					//Cmdtxt = Gettxt1(Cmdtxt);
-					Arg[1] = GetCurline(strCMD);
-
-
-					if (cnt == Arg[1])
-					{
-						ProgramCommand ProgCmd;
-						ProgCmd.recordTaughtPoints(Cmdtxt);
-						cnt++;
-
-						CRC = GetCrc(strCmd);
-						cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
-						UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
-						UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-					}
-
-					if (cnt != (Arg[1] + 1))
-					{
-						cnt = 1;
-						ProgramCommand ProgCmd;
-						ProgCmd.clearTaughtPoints();
-					}
-				}
-			}
+			edMode.SetWindowText(strPos);
+			edStt.SetWindowText(strStt);
+			edTemp.SetWindowText(strTemp);
+			
 			UA_Variant_setScalarCopy(myVariant, &ntoolnum, &UA_TYPES[UA_TYPES_INT32]);
 			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/ToolNumber"), myVariant);
 
@@ -656,47 +732,13 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 			UA_Variant_setScalarCopy(myVariant, &blockrbc, &UA_TYPES[UA_TYPES_BOOLEAN]);
 			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/LockRBC"), myVariant);
 			clntreset = 0;
-		}
-		else
-		{
-			if (clntreset == 0)
-			{				
-				UA_Client_disconnect(client);
-				Sleep(5000);
-				client = UA_Client_new();
-				UA_ClientConfig_setDefault(UA_Client_getConfig(client));
-				UA_Client_connect(client, svIPAddr);
-				UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), &value);
-				nclient = *(UA_Int32*)value.data;
-				nclient += 1;
-				UA_Variant_setScalarCopy(myVariant, &nclient, &UA_TYPES[UA_TYPES_INT32]);
-				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Clientcntstt"), myVariant);			
-			}
-			clntreset++;
-		}
-
-
 		
-
-		//Get Control Command
-
-
-			/*dPos = dPos + 2.5;
-			strPos.Format(_T("%f"), dPos);
-			edPos.SetWindowText(strPos);
-			UA_Double valPos = 0;
-			valPos = _tstof(strPos);
-			UA_Variant_setScalarCopy(myVariant, &valPos, &UA_TYPES[UA_TYPES_DOUBLE]);
-			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Position"), myVariant);*/
-
-			
-		
-
 
 
 	}
 	CDialogEx::OnTimer(nIDEvent);
 }
+
 
 
 
@@ -733,4 +775,13 @@ void CMFCOPCUAClientDlg::OnBnClickedBtsaveipaddr()
 	// TODO: Add your control notification handler code here
 	edSvIPAddr.GetWindowText(svIP);
 	
+}
+CMFCOPCUAClientDlg::~CMFCOPCUAClientDlg()
+{
+
+}
+
+void CMFCOPCUAClientDlg::OnBnClickedBtsw()
+{
+	bCMDcheck = !bCMDcheck;
 }
