@@ -421,24 +421,7 @@ void CMFCOPCUAClientDlg::OnBnClickedBtstart()
 	ProgramCommand ProgCMD;
 	ProgCMD.clearProgramCommand();
 	
-	/*std::string msg;
-	while (msg != "Starting transmitting data")
-	{
-		
-		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/StartMsg"), &value);
-		int len = getlength(&value);
-		msg = get_str_to_variant(&value);
-		msg.resize(len);
-	}
 	
-	CString reply;
-	reply = _T("ACK,OK,READY");
-	UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(reply), &UA_TYPES[UA_TYPES_STRING]);
-	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/StartMsg"), myVariant);
-
-	UA_Int32 valRep = 5;
-	UA_Variant_setScalarCopy(myVariant, &valRep, &UA_TYPES[UA_TYPES_INT32]);
-	UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/Startchar"), myVariant);*/
 }
 
 
@@ -474,7 +457,7 @@ void CMFCOPCUAClientDlg::OnBnClickedBtch1()
 		SetTimer(TIMERCOUNT, 10, NULL);
 	else
 		KillTimer(TIMERCOUNT);
-	thread = AfxBeginThread(CMDThread, this);
+	//thread = AfxBeginThread(CMDThread, this);
 
 }
 
@@ -482,17 +465,35 @@ UINT CMDThread(LPVOID pParam)
 {
 	
 	CMFCOPCUAClientDlg* ptr = (CMFCOPCUAClientDlg*)pParam;
-	while (1)
-	{
+	
 
+	
+			//edName.SetWindowText(CstrCmd);
+			
+	
+	return 0;
+		
+}
+
+
+void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: Add your message handler code here and/or call default
+	if (nIDEvent == TIMERCOUNT)
+	{
+		// Get current time
+		curtime = COleDateTime::GetCurrentTime().Format("%H:%M:%S");
+		edCurTime.SetWindowText(curtime);
 
 		UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDSend"), &value);
 		blen = getlength(&value);
 		strCmd = get_str_to_variant(&value);
 		strCmd.resize(blen);
-		
+		CString CstrCmd(strCmd.c_str());
+		edName.SetWindowText(CstrCmd);
+
 		if (strCmd != "No Command Sent yet")
-		{
+		{  // process event
 			CMDfb = "No Command Sent yet";
 			CString strfb(CMDfb.c_str());
 			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(strfb), &UA_TYPES[UA_TYPES_STRING]);
@@ -500,15 +501,15 @@ UINT CMDThread(LPVOID pParam)
 
 			strCmd = MakeCrc(strCmd);
 			CMD = GetCmd(strCmd);
-			//CString cstrCMD(CMD.c_str());
-			//edPos.SetWindowText(cstrCMD);
+			CString cstrCMD(CMD.c_str());
+			edPos.SetWindowText(cstrCMD);
 			CString cstr(strCmd.c_str());
 
 			if (CMD == "SVON")
 			{
 				Arg[1] = GetServoStt(strCmd);
 				strPos.Format(_T("%d"), Arg[1]);
-				//edMode.SetWindowText(strPos);
+				edMode.SetWindowText(strPos);
 
 
 				CRC = GetCrc(strCmd);
@@ -529,14 +530,14 @@ UINT CMDThread(LPVOID pParam)
 			{
 				Arg[1] = GetCoord(strCmd);
 				strPos.Format(_T("%d"), Arg[1]); // coord
-				//edMode.SetWindowText(strPos);
-				//Arg[2] = GetJoint(strCmd); // joint
-				cntt++;
-				strStt.Format(_T("%d"), cntt);
-				//edStt.SetWindowText(strStt);
+				edMode.SetWindowText(strPos);
+				Arg[2] = GetJoint(strCmd); // joint
+				
+				strStt.Format(_T("%d"), Arg[2]);
+				edStt.SetWindowText(strStt);
 				Arg[3] = GetDirection(strCmd); // direct +1:pos -1:neg
 				strTemp.Format(_T("%d"), Arg[3]);
-				//edTemp.SetWindowText(strTemp);
+				edTemp.SetWindowText(strTemp);
 
 				CRC = GetCrc(strCmd);
 				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
@@ -552,9 +553,9 @@ UINT CMDThread(LPVOID pParam)
 			{
 				Arg[1] = GetJoint1(strCmd); // joint
 				strPos.Format(_T("%d"), Arg[1]);
-				//edMode.SetWindowText(strPos);					
+				edMode.SetWindowText(strPos);					
 				/*strTemp.Format(_T("%d"), countt);*/
-				//edTemp.SetWindowText(strTemp);
+				edTemp.SetWindowText(strTemp);
 				CRC = GetCrc(strCmd);
 				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
 				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
@@ -568,7 +569,7 @@ UINT CMDThread(LPVOID pParam)
 			{
 				Arg[1] = GetSpeed(strCmd);
 				strPos.Format(_T("%d"), Arg[1]);
-				//edMode.SetWindowText(strPos);
+				edMode.SetWindowText(strPos);
 				CRC = GetCrc(strCmd);
 				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
 				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
@@ -600,11 +601,11 @@ UINT CMDThread(LPVOID pParam)
 
 				}
 				strPos.Format(_T("%d"), Arg[0]);  // group
-				//edMode.SetWindowText(strPos);
+				edMode.SetWindowText(strPos);
 				strStt.Format(_T("%d"), Arg[1]); // bit
-				//edStt.SetWindowText(strStt);
+				edStt.SetWindowText(strStt);
 				strTemp.Format(_T("%d"), Arg[2]); // status
-				//edTemp.SetWindowText(strTemp);
+				edTemp.SetWindowText(strTemp);
 
 				CRC = GetCrc(strCmd);
 				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
@@ -675,39 +676,15 @@ UINT CMDThread(LPVOID pParam)
 				}
 			}
 		}
-	}
-
-	
+			//CString CstrCmd(strCmd.c_str());
 			//edName.SetWindowText(CstrCmd);
-			
-	
-	return 0;
-		
-}
+			//CString cstrCMD(CMD.c_str());
+			//edPos.SetWindowText(cstrCMD);
 
+			////edMode.SetWindowText(strPos);
+			//edStt.SetWindowText(strStt);
+			//edTemp.SetWindowText(strTemp);
 
-void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
-{
-	// TODO: Add your message handler code here and/or call default
-	if (nIDEvent == TIMERCOUNT)
-	{
-		// Get current time
-		curtime = COleDateTime::GetCurrentTime().Format("%H:%M:%S");
-		edCurTime.SetWindowText(curtime);
-
-		/*UA_Client_readValueAttribute(client, UA_NODEID("ns=4;s=Robot1/StatusMsg"), &value);
-		svstatus = *(UA_Boolean*)value.data;
-		if (svstatus == true)
-		{*/
-			CString CstrCmd(strCmd.c_str());
-			edName.SetWindowText(CstrCmd);
-			CString cstrCMD(CMD.c_str());
-			edPos.SetWindowText(cstrCMD);
-
-			edMode.SetWindowText(strPos);
-			edStt.SetWindowText(strStt);
-			edTemp.SetWindowText(strTemp);
-			
 			UA_Variant_setScalarCopy(myVariant, &ntoolnum, &UA_TYPES[UA_TYPES_INT32]);
 			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/ToolNumber"), myVariant);
 
@@ -732,6 +709,8 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 			UA_Variant_setScalarCopy(myVariant, &blockrbc, &UA_TYPES[UA_TYPES_BOOLEAN]);
 			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/LockRBC"), myVariant);
 			clntreset = 0;
+
+			
 		
 
 
