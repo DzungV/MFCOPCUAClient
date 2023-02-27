@@ -200,6 +200,7 @@ BOOL CMFCOPCUAClientDlg::OnInitDialog()
 
 	// TODO: Add extra initialization here
 	AfxMessageBox(_T("1. Enter the server IP address\n" "2. Please open the server"), MB_OK | MB_ICONINFORMATION);
+	edSvIPAddr.SetWindowText(_T("localhost"));
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -518,14 +519,67 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 
 				//done
+			}
+			else if (CMD == "MODE")
+			{
+				Arg[1] = GetServoStt(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				edMode.SetWindowText(strPos);
 
 
-
-
-
-
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 
 			}
+			else if (CMD == "LOCK")
+			{
+				Arg[1] = GetServoStt(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				edMode.SetWindowText(strPos);
+
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+
+			}
+			else if (CMD == "RPRG")
+			{
+				std::string strCMD = GetCMD(strCmd);
+				std::string Cmdtxt = Gettxt(strCMD);
+				// Cmdtxt =  name of job
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+			}
+			else if (CMD == "PPRG")
+			{
+				std::string strCMD = GetCMD(strCmd);
+				std::string Cmdtxt = Gettxt(strCMD);
+				// Cmdtxt =  name of job
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+			}
+			else if (CMD == "SPRG")
+			{
+				std::string strCMD = GetCMD(strCmd);
+				std::string Cmdtxt = Gettxt(strCMD);
+				// Cmdtxt =  name of job
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
+			}
+			
 			else if (CMD == "JOGJ")
 			{
 				Arg[1] = GetCoord(strCmd);
@@ -545,10 +599,8 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 
 				//done
-
-
-
 			}
+			
 			else if (CMD == "STOP")
 			{
 				Arg[1] = GetJoint1(strCmd); // joint
