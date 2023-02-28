@@ -52,6 +52,7 @@ CString StrPackData;
 int CRC;
 int CRCpre = 0;
 int cnt = 1;
+int cntpre;
 int fin = 0;
 int finp = 0;
 bool svstatus;
@@ -71,7 +72,7 @@ bool brbmode = 0;
 int nseclevel = 2;
 bool blockrbc = 1;
 int countt;
-int cntt;
+
 
 std::string CMDfb;
  
@@ -349,7 +350,7 @@ int GetCrc(std::string& Cmd)
 
 
 
-int GetCurline(std::string& Cmd) //as same as get status of IObit
+int GetCurline(std::string& Cmd) 
 {
 	std::size_t no = Cmd.find_last_of(",");
 	std::string noln = Cmd.substr(no+1);
@@ -495,10 +496,10 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 
 		if (strCmd != "No Command Sent yet")
 		{  // process event
-			CMDfb = "No Command Sent yet";
+			/*CMDfb = "No Command Sent yet";
 			CString strfb(CMDfb.c_str());
 			UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(strfb), &UA_TYPES[UA_TYPES_STRING]);
-			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDSend"), myVariant);
+			UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDSend"), myVariant);*/
 
 			strCmd = MakeCrc(strCmd);
 			CMD = GetCmd(strCmd);
@@ -545,6 +546,18 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
 				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 
+			}
+			else if (CMD == "SECL")
+			{
+				Arg[1] = GetServoStt(strCmd);
+				strPos.Format(_T("%d"), Arg[1]);
+				edMode.SetWindowText(strPos);
+
+
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 			}
 			else if (CMD == "RPRG")
 			{
@@ -680,23 +693,25 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 					ProgramCommand ProgCmd;
 					ProgCmd.recordProgramCommand(Cmdtxt);
 					cnt++;
-
 					CRC = GetCrc(strCmd);
 					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
 					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
 					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 				}
+				
+			}
+			else if (CMD == "SEPG")
+			{
+				cnt = 1;
+				ProgramCommand ProgCmd;
+				ProgCmd.clearProgramCommand();
 
-				if (cnt != (Arg[1] + 1))
-				{
-					cnt = 1;
-					ProgramCommand ProgCmd;
-					ProgCmd.clearProgramCommand();
+				//done
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 
-					//done
-
-
-				}
 			}
 			else if (CMD == "TPTS")
 			{
@@ -716,16 +731,18 @@ void CMFCOPCUAClientDlg::OnTimer(UINT_PTR nIDEvent)
 					cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
 					UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
 					UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
-				}
+				}		
+			}
+			else if (CMD == "SEPT")
+			{
+				cnt = 1;
+				ProgramCommand ProgCmd;
+				ProgCmd.clearTaughtPoints();
 
-				if (cnt != (Arg[1] + 1))
-				{
-					cnt = 1;
-					ProgramCommand ProgCmd;
-					ProgCmd.clearTaughtPoints();
-
-
-				}
+				CRC = GetCrc(strCmd);
+				cstr.Format("%cACK,OK;%d%c", STX, CRC, ETX);
+				UA_Variant_setScalarCopy(myVariant, &UA_String_fromChars(cstr), &UA_TYPES[UA_TYPES_STRING]);
+				UA_Client_writeValueAttribute(client, UA_NODEID("ns=4;s=Robot1/CMDAck"), myVariant);
 			}
 		}
 			//CString CstrCmd(strCmd.c_str());
